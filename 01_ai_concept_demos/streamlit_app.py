@@ -31,6 +31,17 @@ def get_client(api_key: str) -> Groq:
     return Groq(api_key=api_key)
 
 
+@st.cache_resource
+def get_client_no_retries(api_key: str) -> Groq:
+    # groq-python (like most OpenAI-compatible SDKs) retries 429s
+    # internally by default BEFORE ever raising an exception back to
+    # calling code -- that's why a "no backoff" burst loop just gets
+    # slower instead of visibly failing. The Rate Limiting tab uses THIS
+    # client for both halves of its demo, so its own manual retry loop
+    # (not a hidden SDK-level one) is what's actually being demonstrated.
+    return Groq(api_key=api_key, max_retries=0)
+
+
 def call_groq(client: Groq, system: str, user: str, temperature: float = 0.7, model: str = MODEL) -> str:
     response = client.chat.completions.create(
         model=model,
@@ -458,6 +469,13 @@ with tab_ratelimit:
         first with no protection, then with a retry-and-backoff strategy.
         """
     )
+    st.caption(
+        "Note: this tab uses its own client with the SDK's built-in retry "
+        "disabled (`max_retries=0`) — by default, groq-python retries 429s "
+        "internally before you'd ever see one, which is why a naive burst "
+        "loop otherwise just looks *slower* instead of visibly failing."
+    )
+    no_retry_client = get_client_no_retries(st.session_state["groq_key"])
 
     burst_size = st.number_input(
         "Number of rapid-fire calls",
@@ -480,7 +498,7 @@ with tab_ratelimit:
         for i in range(1, int(burst_size) + 1):
             try:
                 t0 = time.time()
-                call_groq(client, "Be extremely terse.", "Say hello.", model=MODEL)
+                call_groq(no_retry_client, "Be extremely terse.", "Say hello.", model=MODEL)
                 lines.append(f"Call {i}: ✅ OK ({time.time() - t0:.2f}s)")
             except Exception as e:
                 if is_rate_limit_error(e):
@@ -509,7 +527,7 @@ with tab_ratelimit:
             for attempt in range(5):
                 try:
                     t0 = time.time()
-                    call_groq(client, "Be extremely terse.", "Say hello.", model=MODEL)
+                    call_groq(no_retry_client, "Be extremely terse.", "Say hello.", model=MODEL)
                     suffix = f" after {attempt} retr{'y' if attempt == 1 else 'ies'}" if attempt else ""
                     lines.append(f"Call {i}: ✅ OK ({time.time() - t0:.2f}s){suffix}")
                     break
