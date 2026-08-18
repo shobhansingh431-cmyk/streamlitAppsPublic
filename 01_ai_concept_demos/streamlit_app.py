@@ -16,9 +16,9 @@ from groq import Groq
 # models periodically (e.g. mixtral-8x7b-32768 was retired), so a
 # deprecation only needs a one-line fix here instead of a hunt through
 # every tab's code.
-MODEL = "llama-3.3-70b-versatile"  # default model used by most tabs
-FAST_MODEL = "llama-3.1-8b-instant"  # cheap/fast model for the routing demo
-SLOW_MODEL = "llama-3.3-70b-versatile"  # larger/slower model for the routing demo
+MODEL = "openai/gpt-oss-20b"  # default model used by most tabs
+FAST_MODEL = "openai/gpt-oss-20b"  # cheap/fast model for the routing demo
+SLOW_MODEL = "openai/gpt-oss-120b"  # larger/slower model for the routing demo
 
 st.set_page_config(page_title="AI Concepts — Live Lab", page_icon="🧪", layout="wide")
 
