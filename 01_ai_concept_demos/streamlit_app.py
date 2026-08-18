@@ -7,10 +7,18 @@ Multi-student safety: the API key lives ONLY in st.session_state (isolated
 per browser session by Streamlit) — never in a module-level variable, which
 would leak across every student sharing this one deployed process.
 """
+import time
+
 import streamlit as st
 from groq import Groq
 
-MODEL = "openai/gpt-oss-20b"
+# Named model constants, not inline literals -- Groq deprecates/renames
+# models periodically (e.g. mixtral-8x7b-32768 was retired), so a
+# deprecation only needs a one-line fix here instead of a hunt through
+# every tab's code.
+MODEL = "llama-3.3-70b-versatile"  # default model used by most tabs
+FAST_MODEL = "llama-3.1-8b-instant"  # cheap/fast model for the routing demo
+SLOW_MODEL = "llama-3.3-70b-versatile"  # larger/slower model for the routing demo
 
 st.set_page_config(page_title="AI Concepts — Live Lab", page_icon="🧪", layout="wide")
 
@@ -23,9 +31,9 @@ def get_client(api_key: str) -> Groq:
     return Groq(api_key=api_key)
 
 
-def call_groq(client: Groq, system: str, user: str, temperature: float = 0.7) -> str:
+def call_groq(client: Groq, system: str, user: str, temperature: float = 0.7, model: str = MODEL) -> str:
     response = client.chat.completions.create(
-        model=MODEL,
+        model=model,
         temperature=temperature,
         messages=[
             {"role": "system", "content": system},
@@ -33,6 +41,14 @@ def call_groq(client: Groq, system: str, user: str, temperature: float = 0.7) ->
         ],
     )
     return response.choices[0].message.content
+
+
+def is_rate_limit_error(e: Exception) -> bool:
+    # Deliberately string-matched rather than importing a specific
+    # groq.RateLimitError class -- exception class names/paths have
+    # shifted across SDK versions before; this stays correct either way.
+    msg = str(e).lower()
+    return "429" in msg or "rate_limit" in msg or "rate limit" in msg
 
 
 st.title("🧪 AI Concepts — Live Lab")
@@ -66,8 +82,15 @@ if not st.session_state.get("groq_key"):
 
 client = get_client(st.session_state["groq_key"])
 
-tab_guardrails, tab_hallucination, tab_tools, tab_structured = st.tabs(
-    ["🛡️ Guardrails", "👻 Hallucination & RAG", "🔧 Tool Calling", "📋 Structured Output"]
+tab_guardrails, tab_hallucination, tab_tools, tab_structured, tab_routing, tab_ratelimit = st.tabs(
+    [
+        "🛡️ Guardrails",
+        "👻 Hallucination & RAG",
+        "🔧 Tool Calling",
+        "📋 Structured Output",
+        "🚦 Model Routing",
+        "🔥 Rate Limiting",
+    ]
 )
 
 
@@ -374,4 +397,134 @@ with tab_structured:
     st.caption(
         "Run 'loose' a few times if it happens to parse anyway — the point is "
         "reliability, not a single run. 'Strict' should succeed every single time."
+    )
+
+
+# --- Tab 5: Model Routing -----------------------------------------------------
+with tab_routing:
+    st.markdown(
+        f"""
+        ### The story
+        Your PM asks: "Do we really need the expensive model for
+        *everything*?" Let's find out — the same question, sent to a
+        cheap/fast model (`{FAST_MODEL}`) and a larger/slower model
+        (`{SLOW_MODEL}`), timed side by side.
+        """
+    )
+
+    ROUTING_QUESTION = "Explain the difference between authentication and authorization, with a one-sentence example of each."
+    st.markdown(f"**Fixed question:** *{ROUTING_QUESTION}*")
+
+    col_fast, col_slow = st.columns(2)
+
+    with col_fast:
+        st.markdown(f"**Fast model** — `{FAST_MODEL}`")
+        st.caption("Expect: quick response, answer may be shorter/less nuanced.")
+        if st.button("Run FAST model", key="route_fast_run"):
+            start = time.time()
+            answer = call_groq(client, "You are a helpful teaching assistant.", ROUTING_QUESTION, model=FAST_MODEL)
+            st.session_state["route_fast_out"] = answer
+            st.session_state["route_fast_time"] = time.time() - start
+        if "route_fast_out" in st.session_state:
+            st.caption(f"⏱️ {st.session_state['route_fast_time']:.2f}s")
+            st.info(st.session_state["route_fast_out"])
+
+    with col_slow:
+        st.markdown(f"**Slow model** — `{SLOW_MODEL}`")
+        st.caption("Expect: slower response, likely more thorough/nuanced.")
+        if st.button("Run SLOW model", key="route_slow_run"):
+            start = time.time()
+            answer = call_groq(client, "You are a helpful teaching assistant.", ROUTING_QUESTION, model=SLOW_MODEL)
+            st.session_state["route_slow_out"] = answer
+            st.session_state["route_slow_time"] = time.time() - start
+        if "route_slow_out" in st.session_state:
+            st.caption(f"⏱️ {st.session_state['route_slow_time']:.2f}s")
+            st.info(st.session_state["route_slow_out"])
+
+    st.caption(
+        "This is the core idea behind LLM gateway routing: not every request "
+        "needs your most expensive model. Route cheap/simple questions to the "
+        "fast model, reserve the slow model for questions that actually need it."
+    )
+
+
+# --- Tab 6: Rate Limiting -----------------------------------------------------
+with tab_ratelimit:
+    st.markdown(
+        """
+        ### The story
+        What actually happens if you hammer an API way faster than it's
+        designed for? Let's find out on purpose, safely, using your own key —
+        first with no protection, then with a retry-and-backoff strategy.
+        """
+    )
+
+    burst_size = st.number_input(
+        "Number of rapid-fire calls",
+        min_value=5,
+        max_value=100,
+        value=30,
+        step=5,
+        key="rl_burst_size",
+        help="Free-tier rate limits vary by account/model — if 30 doesn't trigger a limit, try increasing this.",
+    )
+
+    if st.button("🔥 Fire rapid burst — NO backoff", key="rl_no_backoff_run"):
+        log_area = st.empty()
+        lines = []
+        hit_limit = False
+        for i in range(1, int(burst_size) + 1):
+            try:
+                t0 = time.time()
+                call_groq(client, "Be extremely terse.", "Say hello.", model=MODEL)
+                lines.append(f"Call {i}: ✅ OK ({time.time() - t0:.2f}s)")
+            except Exception as e:
+                if is_rate_limit_error(e):
+                    lines.append(f"Call {i}: 🚫 RATE LIMITED — {e}")
+                    hit_limit = True
+                else:
+                    lines.append(f"Call {i}: ⚠️ other error — {e}")
+                log_area.code("\n".join(lines))
+                break
+            log_area.code("\n".join(lines))
+        if not hit_limit:
+            st.warning(
+                f"Made it through all {int(burst_size)} calls without hitting a limit — "
+                "try increasing the number above."
+            )
+        else:
+            st.error("There it is — the API pushed back once we went too fast.")
+
+    st.divider()
+
+    if st.button("✅ Same burst, WITH retry + backoff", key="rl_backoff_run"):
+        log_area2 = st.empty()
+        lines = []
+        for i in range(1, int(burst_size) + 1):
+            delay = 1
+            for attempt in range(5):
+                try:
+                    t0 = time.time()
+                    call_groq(client, "Be extremely terse.", "Say hello.", model=MODEL)
+                    suffix = f" after {attempt} retr{'y' if attempt == 1 else 'ies'}" if attempt else ""
+                    lines.append(f"Call {i}: ✅ OK ({time.time() - t0:.2f}s){suffix}")
+                    break
+                except Exception as e:
+                    if is_rate_limit_error(e) and attempt < 4:
+                        lines.append(f"Call {i}: ⏳ rate limited, backing off {delay}s...")
+                        log_area2.code("\n".join(lines))
+                        time.sleep(delay)
+                        delay = min(delay * 2, 10)
+                        continue
+                    lines.append(f"Call {i}: ⚠️ gave up — {e}")
+                    break
+            log_area2.code("\n".join(lines))
+        st.success("Burst completed — backoff absorbed any rate-limit hits instead of just failing.")
+
+    st.caption(
+        "Same burst size, two strategies. The first run either survives cleanly "
+        "or hits a wall and stops dead. The second run, when it DOES get rate "
+        "limited, waits and retries with exponentially increasing delay instead "
+        "of giving up — this is exactly what production LLM clients do for you "
+        "automatically, and why raw 'no retry' clients are risky at scale."
     )

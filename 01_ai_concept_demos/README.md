@@ -24,6 +24,17 @@ project in this repo.
 - 📋 **Structured Output** — a loose "give me JSON" instruction (often
   wrapped in prose/markdown fences, `json.loads()` fails) vs strict JSON
   mode + an explicit schema (parses cleanly every time).
+- 🚦 **Model Routing** — the same question sent to a cheap/fast model
+  (`FAST_MODEL`) and a larger/slower model (`SLOW_MODEL`), timed side by
+  side — the speed-vs-quality tradeoff behind LLM gateway routing.
+- 🔥 **Rate Limiting** — fire a rapid burst of calls with no protection
+  (watch a `429` actually happen) vs the same burst with retry +
+  exponential backoff (watch it absorb the hit instead of failing).
+
+`FAST_MODEL`/`SLOW_MODEL` (and the shared default `MODEL`) are named
+constants at the top of `streamlit_app.py` — Groq periodically
+deprecates/renames models, so a swap only needs a one-line edit there
+instead of a hunt through every tab.
 
 ## How it works
 
@@ -36,7 +47,9 @@ flowchart TD
     D --> F[Hallucination and RAG: same question, no context vs real context]
     D --> G[Tool Calling: local fake function called via Groq tool-calling API]
     D --> H[Structured Output: loose prompt vs strict JSON mode]
-    E & F & G & H --> I[Groq API, using THAT visitor's own key only]
+    D --> J[Model Routing: FAST_MODEL vs SLOW_MODEL, timed]
+    D --> K[Rate Limiting: burst with vs without retry+backoff]
+    E & F & G & H & J & K --> I[Groq API, using THAT visitor's own key only]
 ```
 
 Each student's key lives only in their own `st.session_state` — never in a
