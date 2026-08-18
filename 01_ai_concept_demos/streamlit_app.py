@@ -13,10 +13,10 @@ import streamlit as st
 from groq import Groq
 
 # Named model constants, not inline literals -- Groq deprecates/renames
-# models periodically (e.g. mixtral-8x7b-32768 was retired), so a
-# deprecation only needs a one-line fix here instead of a hunt through
-# every tab's code.
-MODEL = "openai/gpt-oss-20b"  # default model used by most tabs
+# models periodically (e.g. the llama-3.x line was retired in favor of
+# the openai/gpt-oss line), so a deprecation only needs a one-line fix
+# here instead of a hunt through every tab's code.
+MODEL = "openai/gpt-oss-120b"  # default model used by most tabs
 FAST_MODEL = "openai/gpt-oss-20b"  # cheap/fast model for the routing demo
 SLOW_MODEL = "openai/gpt-oss-120b"  # larger/slower model for the routing demo
 
@@ -463,10 +463,14 @@ with tab_ratelimit:
         "Number of rapid-fire calls",
         min_value=5,
         max_value=100,
-        value=30,
+        value=40,
         step=5,
         key="rl_burst_size",
-        help="Free-tier rate limits vary by account/model — if 30 doesn't trigger a limit, try increasing this.",
+        help=(
+            "Groq's free tier is 30 requests/minute for these models — 40 "
+            "reliably goes over that within the same minute. If your account "
+            "has a higher limit, increase this."
+        ),
     )
 
     if st.button("🔥 Fire rapid burst — NO backoff", key="rl_no_backoff_run"):
