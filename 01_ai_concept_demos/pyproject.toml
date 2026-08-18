@@ -1,0 +1,13 @@
+[project]
+name = "ai-concepts-live-lab"
+version = "0.1.0"
+description = "Public live-classroom demo app — Guardrails, Hallucination/RAG, Tool Calling, Structured Output, using your own Groq key"
+readme = "README.md"
+requires-python = ">=3.10"
+# Mirrors requirements.txt exactly -- that file is what Streamlit
+# Community Cloud actually installs from; this pyproject.toml exists
+# so `uv sync` works for local dev/testing.
+dependencies = [
+    "streamlit>=1.39.0",
+    "groq>=0.11.0",
+]

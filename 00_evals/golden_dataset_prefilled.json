@@ -1,0 +1,81 @@
+{
+  "rag_samples": [
+    {
+      "id": 1,
+      "domain": "leave_policy",
+      "question": "How many days of paid annual leave do full-time employees get?",
+      "reference": "Full-time employees are entitled to 12 days of paid annual leave per year, which accrues monthly and can be carried over up to a maximum of 5 days into the next year.",
+      "relevant_contexts": [
+        "All full-time employees are entitled to 12 days of paid annual leave per year.\nLeave accrues monthly and unused days can be carried over up to a maximum of 5 days into the next year."
+      ],
+      "expected_tools": ["retrieve_documents"],
+      "actual_response": "Full-time employees are entitled to 12 days of paid annual leave per year. Leave accrues monthly, and unused days can be carried over up to a maximum of 5 days into the next year.",
+      "actual_contexts": [
+        "All full-time employees are entitled to 12 days of paid annual leave per year.\nLeave accrues monthly and unused days can be carried over up to a maximum of 5 days into the next year."
+      ],
+      "actual_tools_called": ["retrieve_documents"]
+    },
+    {
+      "id": 2,
+      "domain": "insurance_claims",
+      "question": "How many days does a policyholder have to report an accident?",
+      "reference": "A policyholder must report an accident or loss within 30 days of the incident date. Claims reported after 30 days may still be accepted at the adjuster's discretion but require a written explanation for the delay.",
+      "relevant_contexts": [
+        "A policyholder must report an accident or loss within 30 days of the incident date. Claims reported after 30 days may still be accepted at the adjuster's discretion, but require a written explanation for the delay and are subject to additional review before approval."
+      ],
+      "expected_tools": ["retrieve_documents"],
+      "actual_response": "A policyholder must report an accident or loss within 30 days of the incident date. Claims reported after 30 days may still be accepted at the adjuster's discretion, but require a written explanation for the delay.",
+      "actual_contexts": [
+        "A policyholder must report an accident or loss within 30 days of the incident date. Claims reported after 30 days may still be accepted at the adjuster's discretion, but require a written explanation for the delay and are subject to additional review before approval."
+      ],
+      "actual_tools_called": ["retrieve_documents"]
+    },
+    {
+      "id": 3,
+      "domain": "insurance_claims",
+      "question": "What is the maximum payout for a hail damage claim?",
+      "reference": "Hail damage claims are capped at $10,000 per incident, unless the policyholder has purchased the Extended Weather Rider, which raises the cap to $25,000.",
+      "relevant_contexts": [
+        "Hail damage claims are capped at $10,000 per incident, unless the policyholder has purchased the Extended Weather Rider, which raises the cap to $25,000."
+      ],
+      "expected_tools": ["retrieve_documents"],
+      "actual_response": "Hail damage claims have no cap and are always paid out in full, regardless of any policy add-ons.",
+      "actual_contexts": [
+        "Hail damage claims are capped at $10,000 per incident, unless the policyholder has purchased the Extended Weather Rider, which raises the cap to $25,000."
+      ],
+      "actual_tools_called": ["retrieve_documents"]
+    },
+    {
+      "id": 4,
+      "domain": "hr_salary",
+      "question": "What is the salary range for a Product Manager?",
+      "reference": "A Product Manager's salary band is $105,000 - $135,000.",
+      "relevant_contexts": [
+        "Product Manager: $105,000 - $135,000"
+      ],
+      "expected_tools": ["retrieve_documents"],
+      "actual_response": "The salary band for a Product Manager is $105,000 - $135,000.",
+      "actual_contexts": [
+        "All full-time employees are entitled to 12 days of paid annual leave per year.\nLeave accrues monthly and unused days can be carried over up to a maximum of 5 days into the next year.",
+        "Employees may work from home up to 2 days per week, subject to manager approval.",
+        "Product Manager: $105,000 - $135,000"
+      ],
+      "actual_tools_called": ["retrieve_documents"]
+    },
+    {
+      "id": 5,
+      "domain": "insurance_claims",
+      "question": "What are the requirements for filing a water damage claim?",
+      "reference": "Water damage claims must be filed within 14 days of discovery, include time-stamped photos of the affected area, and a plumber's report if the damage was caused by a burst pipe. Claims missing the plumber's report for pipe-related damage will be delayed pending inspection.",
+      "relevant_contexts": [
+        "Water damage claims must be filed within 14 days of discovery and must include time-stamped photos of the affected area. If the damage was caused by a burst pipe, a plumber's report is required; claims missing this report for pipe-related damage will be delayed pending inspection."
+      ],
+      "expected_tools": ["retrieve_documents"],
+      "actual_response": "Water damage claims must be filed within 14 days of discovery and must include time-stamped photos of the affected area.",
+      "actual_contexts": [
+        "Water damage claims must be filed within 14 days of discovery and must include time-stamped photos of the affected area."
+      ],
+      "actual_tools_called": ["retrieve_documents"]
+    }
+  ]
+}

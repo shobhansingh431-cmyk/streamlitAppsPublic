@@ -1,0 +1,23 @@
+# Scoped to streamlit_app.py only, for Streamlit Community Cloud
+# deployment (which reads requirements.txt from the app file's own
+# directory).
+#
+# Deliberately excludes boto3/requests — streamlit_app.py never calls
+# AWS or a live backend; the version pins mirror the reasoning
+# originally documented in 38_rag_selfhosted_stack/pyproject.toml's
+# `evals` extra, which this app was derived from.
+streamlit>=1.39.0
+pandas>=2.2.0
+ragas>=0.2.8
+datasets>=3.1.0
+
+# ragas's llms/base.py unconditionally imports
+# langchain_community.chat_models.vertexai at module load time.
+# langchain-community 0.4.x dropped that module entirely, and versions
+# before 0.3.x cap numpy<2.0. 0.3.31 is the last release confirmed to
+# still have chat_models/vertexai.py while declaring numpy>=2.1.0 for
+# python_version >= "3.13".
+langchain-community==0.3.31
+
+# Wraps Groq's OpenAI-compatible endpoint as RAGAS's judge LLM.
+langchain-openai>=0.2.0
