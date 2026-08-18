@@ -10,7 +10,7 @@ would leak across every student sharing this one deployed process.
 import streamlit as st
 from groq import Groq
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-20b"
 
 st.set_page_config(page_title="AI Concepts — Live Lab", page_icon="🧪", layout="wide")
 
